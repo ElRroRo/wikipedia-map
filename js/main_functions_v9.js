@@ -206,6 +206,9 @@ function resetProperties() {
     const modnodes = window.tracenodes.map(i => {
       const n = nodes.get(i);
       n.color = getColor(n.level, n.isBridge ? '#ffffff' : n.rootColor);
+      // Preserve current canvas position
+      const pos = network.getPositions(n.id)[n.id];
+      if (pos) { n.x = pos.x; n.y = pos.y; }
       return n;
     });
     nodes.update(modnodes);

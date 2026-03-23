@@ -33,16 +33,16 @@ const options = {
   physics: {
     solver: 'forceAtlas2Based',
     forceAtlas2Based: {
-      gravitationalConstant: -50,
-      centralGravity: 0.01,
-      springConstant: 0.08,
-      springLength: 100,
-      damping: 0.6,
-      avoidOverlap: 0
+      gravitationalConstant: -30,
+      centralGravity: 0.005,
+      springConstant: 0.04,
+      springLength: 120,
+      damping: 0.9,
+      avoidOverlap: 0.3
     },
-    maxVelocity: 50,
-    minVelocity: 0.1,
-    stabilization: false // Spawns nodes without the long freezing stabilization phase
+    maxVelocity: 30,
+    minVelocity: 0.75,
+    stabilization: false
   },
   interaction: {
     hover: true,

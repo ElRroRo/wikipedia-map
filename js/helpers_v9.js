@@ -124,9 +124,9 @@ function colorNodes(ns, color) {
 
   for (let i = 0; i < ns.length; i += 1) {
     ns[i].color = colorFunc(ns[i].level, ns[i]);
-    // Prevent snapping
-    delete ns[i].x;
-    delete ns[i].y;
+    // Preserve current canvas position so color-only updates don't displace nodes
+    const pos = network.getPositions(ns[i].id)[ns[i].id];
+    if (pos) { ns[i].x = pos.x; ns[i].y = pos.y; }
   }
   nodes.update(ns);
   window.isReset = false;
@@ -185,9 +185,11 @@ function getSpawnPosition(parentID) {
     // Compute slope
     const slope = dy / dx;
     // Compute the new node position.
-    const dis = 200; // Distance from parent (keep equal to network.options.physics.springLength)
+    const dis = 130; // Distance from parent — close enough to avoid explosion, far enough to separate
     relSpawnX = dis / Math.sqrt((slope ** 2) + 1);
     relSpawnY = relSpawnX * slope;
   }
-  return [Math.round(relSpawnX + x), Math.round(relSpawnY + y)];
+  // Add jitter so sibling nodes don't stack on the exact same point (causes physics freakouts)
+  const jitter = () => (Math.random() - 0.5) * 60;
+  return [Math.round(relSpawnX + x + jitter()), Math.round(relSpawnY + y + jitter())];
 }
