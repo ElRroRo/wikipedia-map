@@ -3,12 +3,56 @@ const base = 'https://en.wikipedia.org/w/api.php';
 
 const domParser = new DOMParser();
 
+let rateLimitShown = false;
+
+function showRateLimitPopup() {
+  const popup = document.createElement('div');
+  popup.className = 'transparent-blur';
+  popup.style.position = 'fixed';
+  popup.style.top = '20px';
+  popup.style.left = '50%';
+  popup.style.transform = 'translateX(-50%)';
+  popup.style.zIndex = '999999';
+  popup.style.background = 'rgba(220, 38, 38, 0.2)';
+  popup.style.border = '1px solid rgba(220, 38, 38, 0.5)';
+  popup.style.color = '#fecaca';
+  popup.style.padding = '15px 30px';
+  popup.style.borderRadius = '8px';
+  popup.style.boxShadow = '0 4px 15px rgba(0,0,0,0.5)';
+  popup.style.textAlign = 'center';
+  popup.style.transition = 'opacity 0.5s ease-in-out';
+  popup.innerHTML = `
+    <h3 style="margin: 0 0 5px 0; color: #f87171;">Rate Limit Reached 🐢</h3>
+    <p style="margin: 0; font-size: 14px;">Wikipedia requires us to slow down. Please wait a moment.</p>
+  `;
+  document.body.appendChild(popup);
+  
+  setTimeout(() => {
+    popup.style.opacity = '0';
+    setTimeout(() => popup.remove(), 500);
+  }, 4500);
+}
+
 /* Make a request to the Wikipedia API */
 function queryApi(query) {
   const url = new URL(base);
   const params = { format: 'json', origin: '*', ...query };
   Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
-  return fetch(url).then(response => response.json());
+  
+  return fetch(url).then(response => {
+    if (response.status === 429) {
+      if (!rateLimitShown) {
+        rateLimitShown = true;
+        showRateLimitPopup();
+        setTimeout(() => { rateLimitShown = false; }, 5000); 
+      }
+      throw new Error('Wikipedia API Rate Limit Exceeded (429)');
+    }
+    return response.json();
+  }).then(data => {
+    console.log('Data parsed correctly');
+    return data;
+  });
 }
 
 /**
