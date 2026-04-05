@@ -84,28 +84,18 @@ const isArticle = name => !(name.endsWith(':') ? name.slice(0, -1) : name).inclu
  * Also returns information about any redirects that were followed.
  */
 function getPageHtml(pageName) {
-  return queryApi({ action: 'parse', page: pageName, prop: 'text', section: 0, redirects: 1 })
+  return queryApi({ action: 'parse', page: pageName, prop: 'text', redirects: 1 })
     .then(res => ({
       document: domParser.parseFromString(res.parse.text['*'], 'text/html'),
       redirectedTo: res.parse.redirects[0] ? res.parse.redirects[0].to : pageName,
     }));
 }
-
-/**
- * Get a DOM object for the first body paragraph in page HTML.
- * @param {HtmlElement} element - An HTML element as returned by `getPageHtml`
- */
-const getFirstParagraph = element =>
-  // First paragraph that isn't marked as "empty"...
-  Array.from(element.querySelectorAll('.mw-parser-output > p:not(.mw-empty-elt)'))
-    // ...and isn't the "coordinates" container
-    .find(p => !p.querySelector('#coordinates'));
-
 /**
  * Get the name of each Wikipedia article linked.
- * @param {HtmlElement} element - An HTML element as returned by `getFirstParagraph`
+ * @param {HtmlElement} element - An HTML element as returned by `getPageHtml`
  */
 function getWikiLinks(element) {
+  if (!element) return []; // In case .mw-parser-output is not found
   const links = Array.from(element.querySelectorAll('a'))
     .map(link => link.getAttribute('href'))
     .filter(href => href && href.startsWith('/wiki/')) // Only links to Wikipedia articles
@@ -115,7 +105,9 @@ function getWikiLinks(element) {
   // Remove duplicates after normalizing
   const ids = links.map(getNormalizedId);
   const isUnique = ids.map((n, i) => ids.indexOf(n) === i); // 'true' in every spot that's unique
-  return links.filter((n, i) => isUnique[i]);
+  const uniqueLinks = links.filter((n, i) => isUnique[i]);
+  // Limit to 100 links so that vis.js doesn't crash on node expansion with huge articles
+  return uniqueLinks.slice(0, 100);
 }
 
 /**
@@ -125,7 +117,7 @@ function getWikiLinks(element) {
 function getSubPages(pageName) {
   return getPageHtml(pageName).then(({ document: doc, redirectedTo }) => ({
     redirectedTo,
-    links: getWikiLinks(getFirstParagraph(doc)),
+    links: getWikiLinks(doc.querySelector('.mw-parser-output')),
   }));
 }
 
