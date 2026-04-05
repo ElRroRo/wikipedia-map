@@ -69,7 +69,7 @@ function expandNodeCallback(page, data, maxLevel, rootId, rootColor) {
     targetDepth = maxLevel;
   } else {
     const depthInput = document.getElementById('depth-input');
-    targetDepth = depthInput ? parseInt(depthInput.value, 10) : 3;
+    targetDepth = depthInput ? parseInt(depthInput.value, 10) : 1;
   }
 
   // Add all children to network

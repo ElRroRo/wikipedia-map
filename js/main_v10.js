@@ -128,7 +128,7 @@ function setStartPages(starts) {
 
   toAdd.map(getNormalizedId).forEach(id => {
     const depthInput = document.getElementById('depth-input');
-    const targetDepth = depthInput ? parseInt(depthInput.value, 10) : 3;
+    const targetDepth = depthInput ? parseInt(depthInput.value, 10) : 1;
     if (targetDepth > 0) {
       expandNode(id);
     }
