@@ -38,6 +38,10 @@
   <link rel="stylesheet" href="./css/modals.css" type="text/css"/>
   <!-- Load css for progress bars -->
   <link rel="stylesheet" href="./css/progress.css" type="text/css"/>
+  <!-- Load css for LLM export modal -->
+  <link rel="stylesheet" href="./css/llm-progress.css" type="text/css"/>
+  <!-- Load css for AI agent panel -->
+  <link rel="stylesheet" href="./css/ai-agent.css" type="text/css"/>
 
 
 </head>
@@ -49,6 +53,9 @@
     <input type="number" id="depth-input" min="1" max="10" value="1" title="Levels to auto-expand" style="width: 50px; text-align: center; font-size: 16px; background: transparent; color: #f8fafc; outline: none; border-right: 1px solid rgba(255, 255, 255, 0.1);">
     <button id="submit" type="button" title="Enter the name of a wikipedia page, then press 'Go'">
       Go
+    </button>
+    <button id="llm-export" type="button" title="Export for LLM analysis (no visualization)" style="background: rgba(168,85,247,0.15); border-left: 1px solid rgba(168,85,247,0.3); color: #c084fc; font-size: 14px; padding: 0 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px;">
+      <span style="font-size: 16px;">🤖</span> LLM
     </button>
     <button id="random" type=button title="Random article">
       <i class="icon ion-shuffle"></i>
@@ -68,6 +75,9 @@
 
   <!-- The buttons (about, github, etc) -->
   <div id="buttons" class="button-container transparent-blur">
+    <button id="download" type="button" title="Download map as interactive HTML">
+      <i class="icon ion-android-download"></i>
+    </button>
     <button id="github" type="button" title="Visit Wikipedia Map on GitHub">
       <i class="icon ion-social-github"></i>
     </button>
@@ -117,6 +127,8 @@
 
 
   <!-- My Stuff -->
+  <!-- Load private config (gitignored) -->
+  <script type="text/javascript" src="./js/config.js"></script>
   <!-- Load Wikipedia API functions -->
   <script type="text/javascript" src="./js/wikipedia_parse_v10.js"></script>
   <!-- Load helper functions -->
@@ -134,6 +146,12 @@
   <script type="text/javascript" src="./js/commafield_v10.js"> </script>
   <!-- Load new features -->
   <script type="text/javascript" src="./js/features_v10.js"> </script>
+  <!-- Load download-map functionality -->
+  <script type="text/javascript" src="./js/download.js"> </script>
+  <!-- Load LLM export functionality -->
+  <script type="text/javascript" src="./js/llm_export.js"> </script>
+  <!-- Load AI Agent -->
+  <script type="text/javascript" src="./js/ai_agent.js"> </script>
   <!-- Load a saved graph if one was linked in the URL -->
   <script type="text/javascript" src="./js/loadsaved.js"> </script>
   <!-- Load micro-libraries for modals and progress bars -->

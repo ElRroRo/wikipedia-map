@@ -58,6 +58,12 @@ function bind() {
   const aboutButton = document.getElementById('about');
   aboutButton.addEventListener('click', () => window.open('https://github.com/controversial/wikipedia-map/blob/master/README.md#usage', '_blank'));
 
+  const downloadButton = document.getElementById('download');
+  downloadButton.addEventListener('click', downloadMap);
+
+  const llmExportButton = document.getElementById('llm-export');
+  if (llmExportButton) llmExportButton.addEventListener('click', goLLMExport);
+
   const menuOpen = document.getElementById('node-menu-open');
   const menuExpand = document.getElementById('node-menu-expand');
   const menu = document.getElementById('node-menu');

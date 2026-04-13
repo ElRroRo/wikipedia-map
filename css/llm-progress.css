@@ -1,0 +1,186 @@
+/* ── LLM Export Progress Modal ── */
+
+#llm-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: none;                       /* shown programmatically */
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.65);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: llm-fadeIn 0.3s ease;
+}
+
+#llm-overlay.active {
+  display: flex;
+}
+
+@keyframes llm-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* Card */
+#llm-card {
+  width: 420px;
+  max-width: 92vw;
+  background: rgba(15, 23, 42, 0.92);
+  backdrop-filter: saturate(180%) blur(20px);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  border: 1px solid rgba(168, 85, 247, 0.25);
+  border-radius: 14px;
+  padding: 28px 32px 24px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.6),
+              0 0 60px rgba(168, 85, 247, 0.08);
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+  animation: llm-cardIn 0.35s cubic-bezier(.16,1,.3,1);
+}
+
+@keyframes llm-cardIn {
+  from { opacity: 0; transform: translateY(18px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+/* Header */
+#llm-card h2 {
+  margin: 0 0 6px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #c084fc;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+#llm-card h2 .llm-icon {
+  font-size: 20px;
+}
+
+#llm-card .llm-subtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-bottom: 20px;
+}
+
+/* Progress bar track */
+.llm-progress-track {
+  width: 100%;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+
+.llm-progress-fill {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #a855f7, #7c3aed);
+  border-radius: 3px;
+  transition: width 0.4s ease;
+  position: relative;
+}
+
+/* Indeterminate shimmer when we don't know progress */
+.llm-progress-fill.indeterminate {
+  width: 100% !important;
+  background: linear-gradient(
+    90deg,
+    rgba(168, 85, 247, 0.25) 0%,
+    rgba(168, 85, 247, 0.7) 50%,
+    rgba(168, 85, 247, 0.25) 100%
+  );
+  background-size: 200% 100%;
+  animation: llm-shimmer 1.8s ease-in-out infinite;
+}
+
+@keyframes llm-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* Stats grid */
+.llm-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px 16px;
+  margin-bottom: 22px;
+}
+
+.llm-stat {
+  display: flex;
+  flex-direction: column;
+}
+
+.llm-stat-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: rgba(255, 255, 255, 0.35);
+  margin-bottom: 2px;
+}
+
+.llm-stat-value {
+  font-size: 22px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #e2e8f0;
+}
+
+.llm-stat-value.highlight {
+  color: #a855f7;
+}
+
+/* Status text */
+.llm-status {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 18px;
+  min-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Buttons row */
+.llm-buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
+.llm-btn {
+  padding: 8px 20px;
+  border-radius: 6px;
+  border: none;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.llm-btn-cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.llm-btn-cancel:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.llm-btn-done {
+  display: none;
+  background: linear-gradient(135deg, #a855f7, #7c3aed);
+  color: #fff;
+}
+
+.llm-btn-done:hover {
+  box-shadow: 0 4px 16px rgba(168, 85, 247, 0.4);
+  transform: translateY(-1px);
+}

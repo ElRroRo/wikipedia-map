@@ -12,3 +12,7 @@ dev
 # graphs/*.json
 
 node_modules
+# Don't include private config (contains email)
+js/config.js
+# Don't include environment file (API keys)
+.env

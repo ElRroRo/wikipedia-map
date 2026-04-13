@@ -39,7 +39,13 @@ function queryApi(query) {
   const params = { format: 'json', origin: '*', ...query };
   Object.keys(params).forEach(key => url.searchParams.append(key, params[key]));
   
-  return fetch(url).then(response => {
+  // Build headers — identify ourselves to get better rate limits
+  const headers = {};
+  if (typeof CONFIG !== 'undefined' && CONFIG.contactEmail) {
+    headers['Api-User-Agent'] = `${CONFIG.appName || 'WikipediaMap'}/1.0 (${CONFIG.contactEmail})`;
+  }
+
+  return fetch(url, { headers }).then(response => {
     if (response.status === 429) {
       if (!rateLimitShown) {
         rateLimitShown = true;
@@ -80,66 +86,65 @@ const isArticle = name => !(name.endsWith(':') ? name.slice(0, -1) : name).inclu
 // --- MAIN FUNCTIONS ---
 
 /**
- * Get a DOM object for the HTML of a Wikipedia page.
- * Also returns information about any redirects that were followed.
- */
-function getPageHtml(pageName) {
-  console.log('[v10] getPageHtml called for:', pageName, '(NO section:0 — full article)');
-  return queryApi({ action: 'parse', page: pageName, prop: 'text', redirects: 1 })
-    .then(res => {
-      const html = res.parse.text['*'];
-      console.log('[v10] Received HTML length:', html.length, 'chars for', pageName);
-      return {
-        document: domParser.parseFromString(html, 'text/html'),
-        redirectedTo: res.parse.redirects[0] ? res.parse.redirects[0].to : pageName,
-      };
-    });
-}
-/**
- * Get the name of each Wikipedia article linked.
- * @param {HtmlElement} element - An HTML element as returned by `getPageHtml`
- */
-function getWikiLinks(element) {
-  if (!element) {
-    console.warn('[v10] getWikiLinks: element is null!');
-    return [];
-  }
-  const allAnchors = Array.from(element.querySelectorAll('a'));
-  console.log('[v10] Total <a> tags found in element:', allAnchors.length);
-  const links = allAnchors
-    .map(link => link.getAttribute('href'))
-    .filter(href => href && href.startsWith('/wiki/'))
-    .map(getPageTitleQuickly)
-    .filter(isArticle)
-    .map(title => title.replace(/_/g, ' '));
-  console.log('[v10] After filtering wiki links:', links.length);
-  // Remove duplicates after normalizing
-  const ids = links.map(getNormalizedId);
-  const isUnique = ids.map((n, i) => ids.indexOf(n) === i);
-  const uniqueLinks = links.filter((n, i) => isUnique[i]);
-  console.log('[v10] Unique links:', uniqueLinks.length);
-  
-  // Uniformly sample up to 100 links across the entire article
-  const MAX_LINKS = 100;
-  if (uniqueLinks.length <= MAX_LINKS) {
-    console.log('[v10] Returning all', uniqueLinks.length, 'links (under cap)');
-    return uniqueLinks;
-  }
-  const step = uniqueLinks.length / MAX_LINKS;
-  const sampled = Array.from({ length: MAX_LINKS }, (_, i) => uniqueLinks[Math.floor(i * step)]);
-  console.log('[v10] Sampled', sampled.length, 'links from', uniqueLinks.length, 'total');
-  return sampled;
-}
-
-/**
- * Given a page title, get the first paragraph links, as well as the name of the page it redirected
- * to.
+ * Get all outgoing article links for a page using the lightweight JSON links API.
+ * Uses action=query&prop=links instead of parsing full HTML — much faster and lighter.
+ * Handles pagination (plcontinue) for articles with 500+ links.
  */
 function getSubPages(pageName) {
-  return getPageHtml(pageName).then(({ document: doc, redirectedTo }) => ({
-    redirectedTo,
-    links: getWikiLinks(doc.querySelector('.mw-parser-output')),
-  }));
+  const allLinks = [];
+
+  function fetchBatch(plcontinue) {
+    const query = {
+      action: 'query',
+      titles: pageName,
+      prop: 'links',
+      pllimit: 'max',       // Up to 500 per request
+      plnamespace: 0,        // Only article namespace
+      redirects: 1,
+    };
+    if (plcontinue) query.plcontinue = plcontinue;
+
+    return queryApi(query).then(res => {
+      // Resolve redirects — get the final page title
+      const pages = res.query.pages;
+      const page = Object.values(pages)[0];
+      const redirectedTo = res.query.redirects
+        ? res.query.redirects[res.query.redirects.length - 1].to
+        : pageName;
+
+      // Collect link titles from this batch
+      if (page.links) {
+        page.links.forEach(link => allLinks.push(link.title));
+      }
+
+      // If there's more pages of results, keep fetching
+      if (res.continue && res.continue.plcontinue) {
+        return fetchBatch(res.continue.plcontinue).then(() => redirectedTo);
+      }
+
+      return redirectedTo;
+    });
+  }
+
+  return fetchBatch().then(redirectedTo => {
+    // Deduplicate after normalizing
+    const ids = allLinks.map(getNormalizedId);
+    const isUnique = ids.map((n, i) => ids.indexOf(n) === i);
+    const uniqueLinks = allLinks.filter((n, i) => isUnique[i]);
+
+    // Uniformly sample up to 100 links across the entire article
+    const MAX_LINKS = 100;
+    let links;
+    if (uniqueLinks.length <= MAX_LINKS) {
+      links = uniqueLinks;
+    } else {
+      const step = uniqueLinks.length / MAX_LINKS;
+      links = Array.from({ length: MAX_LINKS }, (_, i) => uniqueLinks[Math.floor(i * step)]);
+    }
+
+    console.log(`[v10] getSubPages("${pageName}"): ${allLinks.length} raw → ${uniqueLinks.length} unique → ${links.length} sampled`);
+    return { redirectedTo, links };
+  });
 }
 
 /**
