@@ -4,8 +4,13 @@
   text-align: center;
 
   position: absolute;
-  padding: 30px 45px 35px;
-  background: rgba(0, 0, 80, 0.04);
+  padding: 40px 45px;
+  background: rgba(30, 41, 59, 0.85);
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   top: 45%;
   left: 50%;
   transform: translate(-50%, -50%);
@@ -14,10 +19,12 @@
 #info h1 {
   margin: 0;
   position: relative;
+  color: #f8fafc;
 }
 
 #info p {
   margin: .65em 0 1.25em;
+  color: #94a3b8;
 }
 
 
@@ -26,8 +33,11 @@
 @media (max-width: 750px) { /* Full width on small screens (namely iPhones) */
   #info {
     width: 100%;
-    padding: 0 20px 0;
-    background: none;
+    padding: 20px;
+    background: rgba(30, 41, 59, 0.85);
+    border-radius: 0;
+    border: none;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
     top: 35%;
     left: 0;
     transform: translateY(-50%);

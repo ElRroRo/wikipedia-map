@@ -27,24 +27,60 @@ function rgbToHex(rgb) {
   return `#${hexvals.join('')}`;
 }
 
-// Lighten a given hex color by %
-function lightenHex(hex, percent) {
+// Darken a given hex color by %
+function darkenHex(hex, percent) {
   const rgb = hexToRGB(hex); // Convert to RGB
-  const newRgb = rgb.map(x => x + ((Math.min(percent, 100) / 100) * (255 - x)));
+  const newRgb = rgb.map(x => x - ((Math.min(percent, 100) / 100) * x));
   return rgbToHex(newRgb); // and back to hex
 }
-// Get the color for a node, lighten a blue based on level. Subtle.
-function getColor(level) {
-  return lightenHex('#03A9F4', 5 * level); // Gets 5% lighter for each level
+const ROOT_PALETTE = ['#FF007F', '#00FFFF', '#FFFF00', '#7FFF00', '#FF7F00', '#BF00FF', '#007FFF', '#FF0000'];
+
+function getRootColor(index) {
+  return ROOT_PALETTE[index % ROOT_PALETTE.length];
 }
-// Get the highlighted color for a node, lighten a yellow based on level. Subtle.
+
+// Get the color for a node, darken a neon color based on level to fade into dark background.
+function getColor(level, nodeOrColor) {
+  let baseColor;
+  if (nodeOrColor && typeof nodeOrColor === 'object') {
+    baseColor = nodeOrColor.isBridge ? '#ffffff' : nodeOrColor.rootColor;
+  } else {
+    baseColor = nodeOrColor;
+  }
+  const color = baseColor || '#0ea5e9';
+  if (level === 0) return color;
+  return darkenHex(color, 8 * (level)); // Gets 8% darker for each level
+}
+// Get the highlighted color for a node, darken a vibrant yellow based on level.
 function getYellowColor(level) {
-  return lightenHex('#FFC107', 5 * level); // Gets 5% lighter for each level
+  return darkenHex('#f59e0b', 8 * level);
+}
+// Prompt user for input when none detected by shaking the input box
+function noInputDetected() {
+  const cf = document.getElementById('formbox');
+  cf.style.transition = 'transform 0.1s';
+  cf.style.transform = 'translateX(10px)';
+  setTimeout(() => cf.style.transform = 'translateX(-10px)', 100);
+  setTimeout(() => cf.style.transform = 'translateX(10px)', 200);
+  setTimeout(() => cf.style.transform = 'translateX(-10px)', 300);
+  setTimeout(() => {
+    cf.style.transform = 'none';
+    cf.style.transition = 'none';
+  }, 400);
+}
+
+// Get the designated color for start nodes
+function getStartColor() {
+  return '#ec4899'; // Bright neon pink
 }
 // Get the color that an edge should be pointing to a certain level
-function getEdgeColor(level) {
-  const nodecolor = getColor(level);
-  return vis.util.parseColor(nodecolor).border;
+function getEdgeColor(level, baseColor) {
+  const nodecolor = getColor(level, baseColor);
+  try {
+    return vis.util.parseColor(nodecolor).border;
+  } catch (e) {
+    return nodecolor;
+  }
 }
 
 
@@ -87,10 +123,10 @@ function colorNodes(ns, color) {
   const colorFunc = color ? getYellowColor : getColor;
 
   for (let i = 0; i < ns.length; i += 1) {
-    ns[i].color = colorFunc(ns[i].level);
-    // Prevent snapping
-    delete ns[i].x;
-    delete ns[i].y;
+    ns[i].color = colorFunc(ns[i].level, ns[i]);
+    // Preserve current canvas position so color-only updates don't displace nodes
+    const pos = network.getPositions(ns[i].id)[ns[i].id];
+    if (pos) { ns[i].x = pos.x; ns[i].y = pos.y; }
   }
   nodes.update(ns);
   window.isReset = false;
@@ -149,9 +185,11 @@ function getSpawnPosition(parentID) {
     // Compute slope
     const slope = dy / dx;
     // Compute the new node position.
-    const dis = 200; // Distance from parent (keep equal to network.options.physics.springLength)
+    const dis = 130; // Distance from parent — close enough to avoid explosion, far enough to separate
     relSpawnX = dis / Math.sqrt((slope ** 2) + 1);
     relSpawnY = relSpawnX * slope;
   }
-  return [Math.round(relSpawnX + x), Math.round(relSpawnY + y)];
+  // Add jitter so sibling nodes don't stack on the exact same point (causes physics freakouts)
+  const jitter = () => (Math.random() - 0.5) * 60;
+  return [Math.round(relSpawnX + x + jitter()), Math.round(relSpawnY + y + jitter())];
 }

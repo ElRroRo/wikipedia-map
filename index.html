@@ -18,8 +18,7 @@
   <!-- Load 3rd party CSS -->
   <!-- Load CSS for vis.js -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis.css" type="text/css" />
-  <!-- Load CSS for shepherd.js -->
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/shepherd/1.7.0/css/shepherd-theme-arrows.css" type="text/css" />
+
   <!-- Load ionicons -->
   <link rel="stylesheet" href="https://code.ionicframework.com/ionicons/2.0.1/css/ionicons.min.css" type="text/css" />
 
@@ -30,8 +29,7 @@
   <link rel="stylesheet" href="./css/bar.css" type="text/css"/>
   <!-- Load CSS for bottom right buttons -->
   <link rel="stylesheet" href="./css/buttongroup.css" type="text/css"/>
-  <!-- Load css for the custom Shepherd styles -->
-  <link rel="stylesheet" href="./css/shepherd-custom.css" type="text/css"/>
+
   <!-- Load css for comma input field -->
   <link rel="stylesheet" href="./css/commafield.css" type="text/css"/>
   <!-- Load css for welcome info box -->
@@ -40,6 +38,10 @@
   <link rel="stylesheet" href="./css/modals.css" type="text/css"/>
   <!-- Load css for progress bars -->
   <link rel="stylesheet" href="./css/progress.css" type="text/css"/>
+  <!-- Load css for LLM export modal -->
+  <link rel="stylesheet" href="./css/llm-progress.css" type="text/css"/>
+  <!-- Load css for AI agent panel -->
+  <link rel="stylesheet" href="./css/ai-agent.css" type="text/css"/>
 
 
 </head>
@@ -48,8 +50,12 @@
   <!-- The top bar -->
   <div id="formbox" class="transparent-blur">
     <div id="input" class="commafield" data-placeholder="Search Wikipedia..."> </div>
+    <input type="number" id="depth-input" min="1" max="10" value="1" title="Levels to auto-expand" style="width: 50px; text-align: center; font-size: 16px; background: transparent; color: #f8fafc; outline: none; border-right: 1px solid rgba(255, 255, 255, 0.1);">
     <button id="submit" type="button" title="Enter the name of a wikipedia page, then press 'Go'">
       Go
+    </button>
+    <button id="llm-export" type="button" title="Export for LLM analysis (no visualization)" style="background: rgba(168,85,247,0.15); border-left: 1px solid rgba(168,85,247,0.3); color: #c084fc; font-size: 14px; padding: 0 12px; cursor: pointer; transition: 0.2s; display: flex; align-items: center; gap: 5px;">
+      <span style="font-size: 16px;">🤖</span> LLM
     </button>
     <button id="random" type=button title="Random article">
       <i class="icon ion-shuffle"></i>
@@ -58,9 +64,20 @@
       <i class="icon ion-trash-a"></i>
     </button>
   </div>
+  
+  <!-- Local Search Bar (Search within the current map) at Lower Left -->
+  <div id="local-search-box" class="transparent-blur" style="position: absolute; bottom: 20px; left: 20px; z-index: 100; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); padding: 5px; display: flex; align-items: center; gap: 5px; box-shadow: 0 8px 32px rgba(0,0,0,0.4);">
+    <i class="icon ion-android-search" style="margin-left: 5px; opacity: 0.6; font-size: 18px;"></i>
+    <input type="text" id="local-search-input" list="map-nodes-list" placeholder="Search map..." style="background: transparent; border: none; color: #f8fafc; outline: none; padding: 5px; width: 150px; font-size: 14px; transition: width 0.3s ease-in-out;">
+    <datalist id="map-nodes-list"></datalist>
+    <button id="local-search-go" style="background: rgba(255,255,255,0.1); border: none; color: #f8fafc; border-radius: 4px; padding: 4px 10px; cursor: pointer; font-size: 13px; font-weight: bold; transition: 0.3s;">Find</button>
+  </div>
 
   <!-- The buttons (about, github, etc) -->
   <div id="buttons" class="button-container transparent-blur">
+    <button id="download" type="button" title="Download map as interactive HTML">
+      <i class="icon ion-android-download"></i>
+    </button>
     <button id="github" type="button" title="Visit Wikipedia Map on GitHub">
       <i class="icon ion-social-github"></i>
     </button>
@@ -72,13 +89,31 @@
     </button>
   </div>
 
+  </div>
+
+  <!-- Node Context Menu -->
+  <div id="node-menu" class="transparent-blur" style="display: none; position: absolute; z-index: 1000; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); padding: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5);">
+    <div style="color: #f8fafc; margin-bottom: 10px; font-weight: bold; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;" id="node-menu-title">Node Name</div>
+    <div style="display: flex; flex-direction: column; gap: 8px;">
+      <button id="node-menu-open" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.4); border-radius: 4px; padding: 6px; cursor: pointer; transition: 0.2s;">Open Wikipedia</button>
+      <div style="display: flex; gap: 5px;">
+        <button id="node-menu-expand" style="flex: 1; background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.4); border-radius: 4px; padding: 6px; cursor: pointer; transition: 0.2s;">Expand</button>
+        <input type="number" id="node-menu-depth" value="1" min="1" max="5" style="width: 50px; background: transparent; color: #f8fafc; border: 1px solid rgba(255,255,255,0.1); border-radius: 4px; text-align: center; outline: none; appearance: none; -webkit-appearance: none;">
+      </div>
+    </div>
+  </div>
+
   <!-- Will hold the network -->
   <div id="container" class="fullscreen">
     <!-- Welcome message -->
     <div id="info">
       <h1>Wikipedia Map</h1>
       <p>A tool for exploring the world’s knowledge by making connections between topics.</p>
-      <button id="tourinit" class="shepbtn">instructions</button>
+      <div style="margin-top: 25px; font-size: 15px; color: rgba(255, 255, 255, 0.85); text-align: left; background: rgba(0,0,0,0.2); padding: 15px; border-radius: 8px;">
+        <p style="margin-top: 0;"><strong>1. Search:</strong> Input the name of a Wikipedia article. Compare multiple topics by pressing <kbd>,</kbd> <kbd>Tab</kbd> or <kbd>Enter</kbd> after each one.</p>
+        <p><strong>2. Generate:</strong> Submit your query or adjust the auto-expand depth. Wikipedia Map will create and expand a root node for each input topic.</p>
+        <p style="margin-bottom: 0;"><strong>3. Explore:</strong> Click any node to open a context menu where you can read the full article or dynamically expand that specific branch even deeper.</p>
+      </div>
     </div>
   </div>
 
@@ -86,30 +121,37 @@
 
   <!-- 3rd Party -->
   <!-- Load vis.js (just Network) -->
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js"> </script>
+  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/vis/4.16.1/vis-network.min.js?v=3"> </script>
   <!-- Load clipboard.js -->
   <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/clipboard.js/1.5.12/clipboard.min.js"> </script>
-  <!-- Load Shepherd and Tether for the tour -->
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/tether/1.3.3/js/tether.min.js"> </script>
-  <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/shepherd/1.7.0/js/shepherd.min.js"> </script>
+
 
   <!-- My Stuff -->
+  <!-- Load private config (gitignored) -->
+  <script type="text/javascript" src="./js/config.js"></script>
   <!-- Load Wikipedia API functions -->
-  <script type="text/javascript" src="./js/wikipedia_parse.js"></script>
+  <script type="text/javascript" src="./js/wikipedia_parse_v10.js"></script>
   <!-- Load helper functions -->
-  <script type="text/javascript" src="./js/helpers.js"> </script>
+  <script type="text/javascript" src="./js/helpers_v10.js"> </script>
   <!-- Load main functions -->
-  <script type="text/javascript" src="./js/main_functions.js"> </script>
-  <!-- Load code for all the user-facing tutorial+information stuff -->
-  <script type="text/javascript" src="./js/help.js"> </script>
+  <script type="text/javascript" src="./js/main_functions_v10.js"> </script>
+
   <!-- Load the main script -->
-  <script type="text/javascript" src="./js/main.js"> </script>
+  <script type="text/javascript" src="./js/main_v10.js"> </script>
   <!-- Load serialization functions -->
   <script type="text/javascript" src="./js/network_serialize.js"> </script>
   <!-- Load bindings -->
-  <script type="text/javascript" src="./js/bindings.js"> </script>
+  <script type="text/javascript" src="./js/bindings_v10.js"> </script>
   <!-- Transform comma field -->
-  <script type="text/javascript" src="./js/commafield.js"> </script>
+  <script type="text/javascript" src="./js/commafield_v10.js"> </script>
+  <!-- Load new features -->
+  <script type="text/javascript" src="./js/features_v10.js"> </script>
+  <!-- Load download-map functionality -->
+  <script type="text/javascript" src="./js/download.js"> </script>
+  <!-- Load LLM export functionality -->
+  <script type="text/javascript" src="./js/llm_export.js"> </script>
+  <!-- Load AI Agent -->
+  <script type="text/javascript" src="./js/ai_agent.js"> </script>
   <!-- Load a saved graph if one was linked in the URL -->
   <script type="text/javascript" src="./js/loadsaved.js"> </script>
   <!-- Load micro-libraries for modals and progress bars -->

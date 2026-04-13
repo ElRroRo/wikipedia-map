@@ -55,56 +55,113 @@ function renameNode(oldId, newName) {
 }
 
 // Callback to add to a node once data is recieved
-function expandNodeCallback(page, data) {
+function expandNodeCallback(page, data, maxLevel, rootId, rootColor) {
   const node = nodes.get(page); // The node that was clicked
   const level = node.level + 1; // Level for new nodes is one more than parent
+  
+  // Inherit from parent if not provided directly
+  const originId = rootId || node.rootId;
+  const originColor = rootColor || node.rootColor;
   const subpages = data;
+  
+  let targetDepth;
+  if (maxLevel !== undefined) {
+    targetDepth = maxLevel;
+  } else {
+    const depthInput = document.getElementById('depth-input');
+    targetDepth = depthInput ? parseInt(depthInput.value, 10) : 1;
+  }
 
   // Add all children to network
   const subnodes = [];
   const newedges = [];
+  const nodesToExpand = [];
   // Where new nodes should be spawned
   const [x, y] = getSpawnPosition(page);
   // Create node objects
   for (let i = 0; i < subpages.length; i += 1) {
     const subpage = subpages[i];
     const subpageID = getNormalizedId(subpage);
-    if (!nodes.getIds().includes(subpageID)) { // Don't add if node exists
+    let childExists = nodes.getIds().includes(subpageID);
+    
+    if (!childExists) { // Don't add if node exists
       subnodes.push({
         id: subpageID,
         label: wordwrap(decodeURIComponent(subpage), 15),
         value: 1,
         level,
-        color: getColor(level),
+        color: getColor(level, originColor),
         parent: page,
+        rootId: originId,
+        rootColor: originColor,
         x,
         y,
       });
+      if (level < targetDepth) {
+        nodesToExpand.push(subpageID);
+      }
+    } else {
+      // Check for intersection (Bridge)
+      const existingNode = nodes.get(subpageID);
+      if (existingNode.rootId && existingNode.rootId !== originId) {
+        nodes.update({ 
+          id: subpageID, 
+          color: '#ffffff', 
+          isBridge: true,
+          shadow: { enabled: true, color: '#ffffff', size: 15 }
+        });
+      }
     }
 
     if (!getEdgeConnecting(page, subpageID)) { // Don't create duplicate edges in same direction
       newedges.push({
         from: page,
         to: subpageID,
-        color: getEdgeColor(level),
+        color: { inherit: 'from' },
         level,
         selectionWidth: 2,
         hoverWidth: 0,
       });
+      
+      // Increment sizes for both connected nodes
+      node.value = (node.value || 1) + 1;
+      if (childExists) {
+        const childNode = nodes.get(subpageID);
+        nodes.update({ id: subpageID, value: (childNode.value || 1) + 1 });
+      } else {
+        const childNodeInArray = subnodes.find(n => n.id === subpageID);
+        if (childNodeInArray) childNodeInArray.value += 1;
+      }
     }
   }
+
+  // Update parent node's value in dataset
+  nodes.update({ id: page, value: node.value });
 
   // Add the new components to the datasets for the graph
   nodes.add(subnodes);
   edges.add(newedges);
+
+  if (level < targetDepth) {
+    nodesToExpand.forEach(id => expandNode(id));
+  }
+
+  // Update search autocomplete list
+  if (typeof updateSearchDatalist === 'function') {
+    updateSearchDatalist();
+  }
 }
 
 // Expand a node without freezing other stuff
-function expandNode(id) {
-  const pagename = unwrap(nodes.get(id).label);
+function expandNode(id, maxLevel) {
+  const node = nodes.get(id);
+  const pagename = unwrap(node.label);
+  const rootId = node.rootId;
+  const rootColor = node.rootColor;
+  
   getSubPages(pagename).then(({ redirectedTo, links }) => {
     const newId = renameNode(id, redirectedTo);
-    expandNodeCallback(newId, links);
+    expandNodeCallback(newId, links, maxLevel, rootId, rootColor);
   });
   // Mark the expanded node as 'locked' if it's one of the commafield items
   const cf = document.getElementById('input');
@@ -146,12 +203,20 @@ function resetProperties() {
   if (!window.isReset) {
     window.selectedNode = null;
     // Reset node color
-    const modnodes = window.tracenodes.map(i => nodes.get(i));
-    colorNodes(modnodes, 0);
+    const modnodes = window.tracenodes.map(i => {
+      const n = nodes.get(i);
+      n.color = getColor(n.level, n.isBridge ? '#ffffff' : n.rootColor);
+      // Preserve current canvas position
+      const pos = network.getPositions(n.id)[n.id];
+      if (pos) { n.x = pos.x; n.y = pos.y; }
+      return n;
+    });
+    nodes.update(modnodes);
     // Reset edge width and color
     const modedges = window.traceedges.map((i) => {
       const e = edges.get(i);
-      e.color = getEdgeColor(nodes.get(e.to).level);
+      const toNode = nodes.get(e.to);
+      e.color = getEdgeColor(toNode.level, toNode.isBridge ? '#ffffff' : toNode.rootColor);
       return e;
     });
     edgesWidth(modedges, 1);
