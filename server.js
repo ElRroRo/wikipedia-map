@@ -7,7 +7,7 @@ const PORT = process.env.PORT || 8000;
 
 // ── Config ───────────────────────────────────────────────
 const OLLAMA_BASE_URL = process.env.OLLAMA_BASE_URL || 'http://localhost:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemini-3-flash-preview';
+const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'gemma4:31b:cloud';
 const TAVILY_API_KEY = process.env.TAVILY_API_KEY || '';
 
 // ── Middleware ────────────────────────────────────────────
